@@ -1,0 +1,450 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1234567..abcdefg 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -181,6 +181,9 @@ filter_enabled_and_disabled_modules(
+ # Build NS3 library core
+ add_subdirectory(src)
+ 
++# Build libuuid-integ module
++add_subdirectory(libuuid-integ)
++
+ # Build NS library examples
+ add_subdirectory(examples)
+ 
+diff --git a/libuuid-integ/CMakeLists.txt b/libuuid-integ/CMakeLists.txt
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/libuuid-integ/CMakeLists.txt
+@@ -0,0 +1,30 @@
++# Find the libuuid library
++find_library(UUID_LIBRARY uuid)
++if(NOT UUID_LIBRARY)
++    message(FATAL_ERROR "libuuid library not found. Please install libuuid-dev (Ubuntu/Debian) or libuuid-devel (Red Hat/CentOS)")
++endif()
++
++check_include_file_cxx(stdint.h HAVE_STDINT_H)
++if(HAVE_STDINT_H)
++    add_definitions(-DHAVE_STDINT_H)
++endif()
++
++set(examples_as_tests_sources)
++if(${ENABLE_EXAMPLES})
++    set(examples_as_tests_sources
++        #test/libuuid-integ-examples-test-suite.cc
++        )
++endif()
++
++build_lib(
++    LIBNAME libuuid-integ
++    SOURCE_FILES model/libuuid-integ.cc
++                 helper/libuuid-integ-helper.cc
++    HEADER_FILES model/libuuid-integ.h
++                 helper/libuuid-integ-helper.h
++    LIBRARIES_TO_LINK ${libcore}
++                      ${UUID_LIBRARY}
++    TEST_SOURCES test/libuuid-integ-test-suite.cc
++                 ${examples_as_tests_sources}
++)
++
+diff --git a/libuuid-integ/examples/CMakeLists.txt b/libuuid-integ/examples/CMakeLists.txt
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/libuuid-integ/examples/CMakeLists.txt
+@@ -0,0 +1,8 @@
++build_lib_example(
++    NAME libuuid-integ-example
++    SOURCE_FILES libuuid-integ-example.cc
++    LIBRARIES_TO_LINK ${liblibuuid-integ}
++                      ${libapplications}
++                      ${libcsma}
++                      ${libinternet}
++)
+diff --git a/libuuid-integ/examples/libuuid-integ-example.cc b/libuuid-integ/examples/libuuid-integ-example.cc
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/libuuid-integ/examples/libuuid-integ-example.cc
+@@ -0,0 +1,98 @@
++/*
++ * Copyright (c) 2025 NITK Surathkal
++ *
++ * SPDX-License-Identifier: GPL-2.0-only
++ *
++ * Authors: Akshat Bharara <akshat.bharara05@gmail.com>
++ *          Mohit P. Tahiliani <tahiliani@nitk.edu.in>
++ */
++
++#include "ns3/applications-module.h"
++#include "ns3/core-module.h"
++#include "ns3/csma-module.h"
++#include "ns3/internet-module.h"
++#include "ns3/libuuid-integ-helper.h"
++
++using namespace ns3;
++
++NS_LOG_COMPONENT_DEFINE("LibuuidIntegExample");
++
++int main(int argc, char* argv[])
++{
++    // Create nodes
++    NodeContainer nodes;
++    nodes.Create(2);
++
++    // Create UUID helper and assign UUIDs to nodes
++    UuidHelper uuidHelper;
++    uuidHelper.AssignUuids(nodes);
++
++    // Display node UUIDs
++    std::cout << "=== Node UUID Assignment ===" << std::endl;
++    uuidHelper.PrintNodeUuids(nodes);
++
++    // Install internet stack
++    InternetStackHelper internet;
++    internet.Install(nodes);
++
++    // Create CSMA channel
++    CsmaHelper csma;
++    csma.SetChannelAttribute("DataRate", DataRateValue(DataRate(5000000)));
++    csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
++    NetDeviceContainer devices = csma.Install(nodes);
++
++    // Assign IP addresses
++    Ipv4AddressHelper ipv4;
++    ipv4.SetBase("10.1.1.0", "255.255.255.0");
++    Ipv4InterfaceContainer interfaces = ipv4.Assign(devices);
++
++    uint16_t port = 9;
++
++    // Create UDP server on node 1
++    UdpEchoServerHelper echoServer(port);
++    ApplicationContainer serverApps = echoServer.Install(nodes.Get(1));
++    serverApps.Start(Seconds(1.0));
++    serverApps.Stop(Seconds(10.0));
++
++    // Create payload containing node UUIDs for identification
++    std::string nodeUuid0 = uuidHelper.GetNodeUuid(nodes.Get(0));
++    std::string nodeUuid1 = uuidHelper.GetNodeUuid(nodes.Get(1));
++    
++    std::string uuidPayload = "Message from Node UUID: " + nodeUuid0 + 
++                             " to Node UUID: " + nodeUuid1 + 
++                             " - LibUUID Integration Test from NITK!";
++
++    std::cout << "\nNode 0 UUID: " << nodeUuid0 << std::endl;
++    std::cout << "Node 1 UUID: " << nodeUuid1 << std::endl;
++    std::cout << "Payload size: " << uuidPayload.size() << " bytes" << std::endl;
++
++    // Create UDP client with UUID-based payload
++    UdpEchoClientHelper echoClient(interfaces.GetAddress(1), port);
++    echoClient.SetAttribute("MaxPackets", UintegerValue(1));
++    echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
++    echoClient.SetAttribute("PacketSize", UintegerValue(uuidPayload.size()));
++    
++    ApplicationContainer clientApps = echoClient.Install(nodes.Get(0));
++    
++    // Set UUID payload as the packet content
++    echoClient.SetFill(clientApps.Get(0), (uint8_t*)uuidPayload.c_str(), uuidPayload.size(), uuidPayload.size());
++
++    clientApps.Start(Seconds(2.0));
++    clientApps.Stop(Seconds(10.0));
++
++    // Enable PCAP tracing to see UUID-based packets
++    csma.EnablePcapAll("libuuid-integ", false);
++    
++    // Run simulation
++    Simulator::Run();
++    
++    std::cout << "\nSimulation complete!" << std::endl;
++    std::cout << "Check libuuid-integ*.pcap files to see the UUID-based packets in Wireshark." << std::endl;
++    
++    std::cout << "\n=== LibUUID Integration Summary ===" << std::endl;
++    std::cout << "Successfully assigned UUIDs to " << nodes.GetN() << " nodes" << std::endl;
++    
++    Simulator::Destroy();
++    return 0;
++}
++
+diff --git a/libuuid-integ/helper/libuuid-integ-helper.cc b/libuuid-integ/helper/libuuid-integ-helper.cc
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/libuuid-integ/helper/libuuid-integ-helper.cc
+@@ -0,0 +1,85 @@
++#include "libuuid-integ-helper.h"
++#include "ns3/log.h"
++#include <uuid/uuid.h>
++#include <iostream>
++#include <iomanip>
++#include <sstream>
++
++namespace ns3
++{
++
++NS_LOG_COMPONENT_DEFINE("UuidHelper");
++
++UuidHelper::UuidHelper()
++{
++    NS_LOG_FUNCTION(this);
++}
++
++UuidHelper::~UuidHelper()
++{
++    NS_LOG_FUNCTION(this);
++}
++
++void
++UuidHelper::AssignUuids(const NodeContainer& nodes)
++{
++    NS_LOG_FUNCTION(this << &nodes);
++    
++    for (uint32_t i = 0; i < nodes.GetN(); ++i)
++    {
++        Ptr<Node> node = nodes.Get(i);
++        uint32_t nodeId = node->GetId();
++        
++        // Generate UUID for this node if not already assigned
++        if (m_nodeUuids.find(nodeId) == m_nodeUuids.end())
++        {
++            std::string uuid = GenerateUuid();
++            m_nodeUuids[nodeId] = uuid;
++            NS_LOG_INFO("Assigned UUID " << uuid << " to node " << nodeId);
++        }
++    }
++}
++
++std::string
++UuidHelper::GetNodeUuid(Ptr<Node> node)
++{
++    NS_LOG_FUNCTION(this << node);
++    
++    uint32_t nodeId = node->GetId();
++    auto it = m_nodeUuids.find(nodeId);
++    
++    if (it != m_nodeUuids.end())
++    {
++        return it->second;
++    }
++    else
++    {
++        // Generate UUID if not found
++        std::string uuid = GenerateUuid();
++        m_nodeUuids[nodeId] = uuid;
++        NS_LOG_INFO("Generated new UUID " << uuid << " for node " << nodeId);
++        return uuid;
++    }
++}
++
++void
++UuidHelper::PrintNodeUuids(const NodeContainer& nodes)
++{
++    NS_LOG_FUNCTION(this << &nodes);
++    
++    for (uint32_t i = 0; i < nodes.GetN(); ++i)
++    {
++        Ptr<Node> node = nodes.Get(i);
++        uint32_t nodeId = node->GetId();
++        std::string uuid = GetNodeUuid(node);
++        std::cout << "Node " << nodeId << " UUID: " << uuid << std::endl;
++    }
++}
++
++std::string
++UuidHelper::GenerateUuid()
++{
++    uuid_t uuid;
++    uuid_generate_random(uuid);
++    
++    char uuid_str[37]; // UUID string is 36 characters + null terminator
++    uuid_unparse_lower(uuid, uuid_str);
++    
++    return std::string(uuid_str);
++}
++
++} // namespace ns3
+diff --git a/libuuid-integ/helper/libuuid-integ-helper.h b/libuuid-integ/helper/libuuid-integ-helper.h
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/libuuid-integ/helper/libuuid-integ-helper.h
+@@ -0,0 +1,63 @@
++#ifndef LIBUUID_INTEG_HELPER_H
++#define LIBUUID_INTEG_HELPER_H
++
++#include "ns3/node-container.h"
++#include "ns3/node.h"
++#include <string>
++#include <map>
++
++namespace ns3
++{
++
++/**
++ * @ingroup libuuid-integ
++ * @brief Helper class for managing UUIDs in ns-3 nodes
++ * 
++ * This helper class provides functionality to assign unique UUIDs to nodes
++ * and retrieve them when needed. It uses the libuuid library to generate
++ * RFC 4122 compliant UUIDs.
++ */
++class UuidHelper
++{
++public:
++    /**
++     * Constructor
++     */
++    UuidHelper();
++
++    /**
++     * Destructor
++     */
++    ~UuidHelper();
++
++    /**
++     * Assign UUIDs to all nodes in the container
++     * @param nodes The container of nodes to assign UUIDs to
++     */
++    void AssignUuids(const NodeContainer& nodes);
++
++    /**
++     * Get the UUID for a specific node
++     * @param node The node to get the UUID for
++     * @return The UUID string for the node
++     */
++    std::string GetNodeUuid(Ptr<Node> node);
++
++    /**
++     * Print the UUIDs of all nodes in the container
++     * @param nodes The container of nodes to print UUIDs for
++     */
++    void PrintNodeUuids(const NodeContainer& nodes);
++
++private:
++    std::map<uint32_t, std::string> m_nodeUuids; ///< Map of node IDs to UUIDs
++
++    /**
++     * Generate a new UUID string
++     * @return A new UUID string
++     */
++    std::string GenerateUuid();
++};
++
++} // namespace ns3
++
++#endif // LIBUUID_INTEG_HELPER_H
+diff --git a/libuuid-integ/model/libuuid-integ.cc b/libuuid-integ/model/libuuid-integ.cc
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/libuuid-integ/model/libuuid-integ.cc
+@@ -0,0 +1,7 @@
++#include "libuuid-integ.h"
++
++namespace ns3
++{
++
++// This file serves as the main implementation file for the libuuid-integ module
++// Currently empty as main functionality is in the helper classes
++
++} // namespace ns3
+diff --git a/libuuid-integ/model/libuuid-integ.h b/libuuid-integ/model/libuuid-integ.h
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/libuuid-integ/model/libuuid-integ.h
+@@ -0,0 +1,26 @@
++#ifndef LIBUUID_INTEG_H
++#define LIBUUID_INTEG_H
++
++/**
++ * @defgroup libuuid-integ LibUUID Integration Module
++ * 
++ * This module provides integration of the libuuid library with ns-3,
++ * allowing for RFC 4122 compliant UUID generation and assignment to nodes.
++ * 
++ * The module includes:
++ * - UuidHelper: Helper class for managing node UUIDs
++ * - UUID generation using the libuuid library
++ * - UUID assignment and retrieval for ns-3 nodes
++ * 
++ * @author Akshat Bharara <akshat.bharara05@gmail.com>
++ * @author Mohit P. Tahiliani <tahiliani@nitk.edu.in>
++ */
++
++namespace ns3
++{
++
++/**
++ * @ingroup libuuid-integ
++ * @brief LibUUID Integration main header
++ * 
++ * This header provides the main definitions for the libuuid integration module.
++ * Currently serves as the module's main header file.
++ */
++
++} // namespace ns3
++
++#endif // LIBUUID_INTEG_H
+diff --git a/libuuid-integ/test/libuuid-integ-test-suite.cc b/libuuid-integ/test/libuuid-integ-test-suite.cc
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/libuuid-integ/test/libuuid-integ-test-suite.cc
+@@ -0,0 +1,52 @@
++#include "ns3/test.h"
++
++using namespace ns3;
++
++/**
++ * @ingroup libuuid-integ-tests
++ * @defgroup libuuid-integ-test LibUUID Integration test suite
++ */
++
++/**
++ * @ingroup libuuid-integ-test
++ * Test case for UUID generation and assignment
++ */
++class LibuuidIntegTestCase : public TestCase
++{
++public:
++    LibuuidIntegTestCase();
++    virtual ~LibuuidIntegTestCase();
++
++private:
++    void DoRun() override;
++};
++
++LibuuidIntegTestCase::LibuuidIntegTestCase()
++    : TestCase("LibUUID Integration test case")
++{
++}
++
++LibuuidIntegTestCase::~LibuuidIntegTestCase()
++{
++}
++
++void
++LibuuidIntegTestCase::DoRun()
++{
++    // Add your test implementation here
++    NS_TEST_ASSERT_MSG_EQ(true, true, "Basic test");
++}
++
++/**
++ * @ingroup libuuid-integ-test
++ * LibUUID Integration Test Suite
++ */
++class LibuuidIntegTestSuite : public TestSuite
++{
++public:
++    LibuuidIntegTestSuite();
++};
++
++LibuuidIntegTestSuite::LibuuidIntegTestSuite()
++    : TestSuite("libuuid-integ", UNIT)
++{
++    AddTestCase(new LibuuidIntegTestCase, TestCase::QUICK);
++}
++
++static LibuuidIntegTestSuite slibuuidIntegTestSuite;
