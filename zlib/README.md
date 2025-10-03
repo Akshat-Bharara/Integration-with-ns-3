@@ -1,4 +1,3 @@
-````markdown
 # Documentation for integrating zlib library in ns-3
 
 This document provides an overview of integrating the **zlib** compression library into **ns-3**.  
@@ -131,9 +130,4 @@ else
 {
     std::cout << "FAILURE: Data mismatch!" << std::endl;
 }
-```
-
----
-
-```
 ```
