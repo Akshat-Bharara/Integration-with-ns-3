@@ -114,7 +114,7 @@ The simulation logs compression ratio, saves PCAP traces (`zlib-integ*.pcap`), a
 
 ## Reference Code
 
-See [`examples/zlib-point-to-point.cc`](examples/zlib-point-to-point.cc) for the complete working code:
+See [`examples/zlib-integ-example.cc`](examples/zlib-integ-example.cc) for the complete working code:
 
 * Compresses data
 * Sends it over a UDP client-server application
