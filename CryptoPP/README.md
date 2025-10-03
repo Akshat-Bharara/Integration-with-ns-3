@@ -1,4 +1,3 @@
-````markdown
 # Documentation for integrating Crypto++ library in ns-3
 
 This document gives an overview of **Crypto++ (CryptoPP)** integration into **ns-3**.  
@@ -130,9 +129,4 @@ else
 {
     std::cout << "FAILURE: Data mismatch!" << std::endl;
 }
-```
-
----
-
-```
 ```
