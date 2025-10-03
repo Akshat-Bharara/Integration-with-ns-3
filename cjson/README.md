@@ -176,30 +176,3 @@ if (parsedJson && parsedJson->IsValid()) {
 ./ns3 run mycjson-network-example
 ```
 
-## Use Cases
-
-- **Structured Communication**: Create self-describing network protocols
-- **Configuration Management**: Store and exchange simulation parameters
-- **Data Logging**: Structure simulation results and network events
-- **Protocol Testing**: Validate data integrity in network transmissions
-- **Topology Description**: Represent complex network topologies
-
-## Benefits
-
-- **Human Readable**: JSON format is easy to read and debug
-- **Lightweight**: Minimal overhead for network simulations
-- **Interoperable**: Compatible with web services and APIs
-- **Flexible**: Supports complex nested data structures
-- **Validated**: Built-in validation ensures data integrity
-
-## Contributing
-
-When contributing to this module, please ensure:
-- All new functions include appropriate documentation
-- Test cases are provided for new functionality
-- Examples demonstrate practical usage
-- Code follows ns-3 coding standards
-
-## License
-
-This module follows the same license as ns-3.
