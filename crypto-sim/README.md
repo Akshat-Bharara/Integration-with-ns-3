@@ -113,7 +113,7 @@ The program encrypts a string using AES, transmits it over a UDP client-server s
 
 ## Reference Code
 
-The complete example (`examples/crypto-sim-example.cc`) demonstrates:
+See [`examples/crypto-sim-example.cc`](examples/crypto-sim-example.cc) for the complete working code:
 
 * Encrypting a payload
 * Sending encrypted packets between nodes
