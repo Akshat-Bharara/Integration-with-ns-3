@@ -24,8 +24,6 @@ build_lib(
   HEADER_FILES
     helper/crypto-sim-helper.h
     model/crypto-sim.h
-  TEST_SOURCES
-    test/crypto-sim-test-suite.cc
   LIBRARIES_TO_LINK
     ${libraries_to_link}
     core

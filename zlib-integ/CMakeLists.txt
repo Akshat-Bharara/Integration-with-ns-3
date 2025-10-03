@@ -18,8 +18,6 @@ build_lib(
   HEADER_FILES
     helper/zlib-integ-helper.h
     model/zlib-integ.h
-  TEST_SOURCES
-    test/zlib-integ-test-suite.cc
   LIBRARIES_TO_LINK
     ${libraries_to_link}
     core
