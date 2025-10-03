@@ -24,7 +24,7 @@ are defined in the file ``replace.txt``.
 Detailed |ns3| Sphinx documentation guidelines can be found `here <https://www.nsnam.org/docs/contributing/html/models.html>`_
 
 
-The source code for the new module lives in the directory ``contrib/libuuid-integ``.
+The source code for the new module lives in the directory ``contrib/mycjson``.
 
 
 Scope and Limitations
