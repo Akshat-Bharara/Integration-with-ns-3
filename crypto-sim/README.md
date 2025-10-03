@@ -1,67 +1,132 @@
-# Crypto-Sim Module
+# Documentation for integrating Crypto++ library in ns-3
 
-## Overview
+This document gives an overview of **Crypto++ (CryptoPP)** integration into **ns-3**.  
+Crypto++ can be used to perform encryption (AES, RSA, etc.) on packet payloads to enable secure communication between nodes in a simulation.
 
-The crypto-sim module provides cryptographic functionality for NS-3 simulations using the Crypto++ library. This module enables secure communication simulation by providing AES encryption and decryption capabilities.
+---
 
-## Features
+## What is Crypto++?
 
-- AES encryption in CBC mode
-- Automatic key and IV generation
-- Seamless integration with NS-3 applications
-- Support for arbitrary data encryption/decryption
+Crypto++ is a free C++ class library of cryptographic schemes.  
+It provides implementations for encryption, hashing, key exchange, and random number generation.  
+Crypto++ is portable across platforms and has a modular design, making it usable in research and simulation projects.  
 
-## Dependencies
-
-- Crypto++ library (installed locally on the system)
+---
 
 ## Installation
 
-1. Ensure Crypto++ is installed on your system:
-   - Ubuntu/Debian: `sudo apt-get install libcrypto++-dev`
-   - macOS with Homebrew: `brew install cryptopp`
-   - CentOS/RHEL: `sudo yum install cryptopp-devel`
+### Linux/Unix
+```bash
+sudo apt install libcrypto++-dev libcrypto++-doc libcrypto++-utils
+````
 
-2. The module will be automatically built if Crypto++ is detected during NS-3 configuration.
+### macOS
 
-## Usage
+```bash
+brew install cryptopp
+```
 
-### Basic Example
+---
+
+## Module Structure
+
+```
+contrib/crypto-sim
+├── CMakeLists.txt
+├── README.md
+├── doc
+│   └── crypto-sim.rst
+├── examples
+│   ├── CMakeLists.txt
+│   └── crypto-sim-example.cc
+├── helper
+│   ├── crypto-sim-helper.cc
+│   └── crypto-sim-helper.h
+├── model
+    ├── crypto-sim.cc
+    └── crypto-sim.h
+```
+
+---
+
+## Key Components
+
+* **CryptoSim class** (`model/crypto-sim.h/.cc`)
+
+  * Inherits from `ns3::Object`
+  * `Encrypt()` → performs AES encryption
+  * `Decrypt()` → performs AES decryption
+  * Returns library version using `GetVersion()` (planned, not implemented yet)
+
+* **CryptoSimHelper class** (`helper/crypto-sim-helper.h/.cc`)
+
+  * Standard ns-3 helper
+
+* **Example program** (`examples/crypto-sim-example.cc`)
+
+  * Shows AES encryption + decryption with UDP echo applications
+
+---
+
+## Example Program Flow
 
 ```cpp
-#include "ns3/crypto-sim.h"
+NodeContainer nodes;
+nodes.Create(2);
 
-// Create crypto instance
-Ptr<CryptoSim> crypto = CreateObject<CryptoSim>();
+PointToPointHelper pointToPoint;
+pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
+pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
 
-// Encrypt data
-std::vector<uint8_t> plaintext = {'H', 'e', 'l', 'l', 'o'};
-std::vector<uint8_t> encrypted = crypto->Encrypt(plaintext);
+UdpEchoServerHelper echoServer(port);
+ApplicationContainer serverApps = echoServer.Install(nodes.Get(1));
 
-// Decrypt data
-std::vector<uint8_t> decrypted = crypto->Decrypt(encrypted);
+Ptr<CryptoSim> encryptor = CreateObject<CryptoSim>();
+std::vector<uint8_t> encryptedData = encryptor->Encrypt(inputVector);
+
+UdpEchoClientHelper echoClient(interfaces.GetAddress(1), port);
+echoClient.SetAttribute("PacketSize", UintegerValue(encryptedData.size()));
+
+pointToPoint.EnablePcapAll("crypto-sim", false);
+Simulator::Run();
 ```
 
-### Integration with Applications
+---
 
-The encrypted data can be used as payload in any NS-3 application, providing secure communication simulation capabilities.
+## Running the Example
 
-## Examples
+### Build
 
-- `crypto-sim-example.cc`: Demonstrates basic encryption/decryption with UDP communication
-
-## Testing
-
-Run the test suite with:
 ```bash
-./test.py --suite=crypto-sim
+./ns3 build crypto-sim-example
 ```
 
-## Authors
+### Run
 
-- Samved Sajankila <samved58117@gmail.com>
-- Mohit P. Tahiliani <tahiliani@nitk.edu.in>
+```bash
+./ns3 run crypto-sim-example
+```
 
-## License
+The program encrypts a string using AES, transmits it over a UDP client-server setup, saves encrypted packets in PCAP format, and then demonstrates decryption.
 
-GPL-2.0-only
+---
+
+## Reference Code
+
+The complete example (`examples/crypto-sim-example.cc`) demonstrates:
+
+* Encrypting a payload
+* Sending encrypted packets between nodes
+* Viewing encrypted packets in Wireshark (`crypto-sim*.pcap`)
+* Decrypting packets to validate correctness
+
+```cpp
+if (originalData == decryptedString)
+{
+    std::cout << "SUCCESS: Decrypted data matches original!" << std::endl;
+}
+else
+{
+    std::cout << "FAILURE: Data mismatch!" << std::endl;
+}
+```
