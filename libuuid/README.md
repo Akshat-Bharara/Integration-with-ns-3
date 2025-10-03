@@ -51,7 +51,7 @@ sudo apt update
 sudo apt install uuid-dev
 ```
 
-## Step 1: Create the Module Directory Structure
+## Create the Module Directory Structure
 
 Create a new module directory in your ns-3 root:
 
@@ -77,30 +77,6 @@ ns-3-dev/
 
 ### Refer to the specific files attached in the libuuid-integ folder 
 
-## Step 2: Create the Module Header Files
-
-### 2.1 Model Header (`libuuid-integ/model/libuuid-integ.h`)
-
-### 2.2 Model Implementation (`libuuid-integ/model/libuuid-integ.cc`)
-
-## Step 3: Create the Helper Class
-
-### 3.1 Helper Header (`libuuid-integ/helper/libuuid-integ-helper.h`)
-
-### 3.2 Helper Implementation (`libuuid-integ/helper/libuuid-integ-helper.cc`)
-
-## Step 4: Create CMake Configuration Files
-
-### 4.1 Main Module CMakeLists.txt (`libuuid-integ/CMakeLists.txt`)
-
-### 4.2 Examples CMakeLists.txt (`libuuid-integ/examples/CMakeLists.txt`)
-
-## Step 5: Create Example Program
-
-### Example (`libuuid-integ/examples/libuuid-integ-example.cc`)
-
-## Step 6: Integrate with Main ns-3 Build System
-
 ### Modify Main CMakeLists.txt
 
 Add your module to the main ns-3 CMakeLists.txt file:
@@ -121,9 +97,9 @@ add_subdirectory(libuuid-integ)
 add_subdirectory(examples)
 ```
 
-## Step 7: Build and Test
+## Build and Test
 
-### 7.1 Configure ns-3
+### Configure ns-3
 
 ```bash
 cd /path/to/ns-3-dev
@@ -131,16 +107,63 @@ cd /path/to/ns-3-dev
 ./ns3 configure --enable-examples
 ```
 
-### 7.2 Build the Project
+### Build the Project
 
 ```bash
 ./ns3 build
 ```
 
-### 7.3 Run the Example
+### Run the Example
 
 ```bash
 ./ns3 run libuuid-integ-example
+```
+
+## Key Components
+
+* **UuidHelper class** (`helper/libuuid-integ-helper.h/.cc`)
+
+  * Standard ns-3 helper class for UUID management
+  * `AssignUuids()` → assigns UUIDs to node containers
+  * `GetNodeUuid()` → retrieves UUID for specific node
+  * `PrintNodeUuids()` → displays all node UUIDs
+  * `GenerateUuid()` → creates UUIDs
+
+---
+
+## Example Program Flow
+
+```cpp
+// Create network nodes
+NodeContainer nodes;
+nodes.Create(2);
+
+// Create UUID helper and assign unique identifiers
+UuidHelper uuidHelper;
+uuidHelper.AssignUuids(nodes);
+
+// Display assigned UUIDs
+std::cout << "=== Node UUID Assignment ===" << std::endl;
+uuidHelper.PrintNodeUuids(nodes);
+
+...
+
+// Create UUID-based payload for network transmission
+std::string nodeUuid0 = uuidHelper.GetNodeUuid(nodes.Get(0));
+std::string nodeUuid1 = uuidHelper.GetNodeUuid(nodes.Get(1));
+
+std::string uuidPayload = "Message from Node UUID: " + nodeUuid0 + 
+                         " to Node UUID: " + nodeUuid1 + 
+                         " - LibUUID Integration Test!";
+
+
+...
+
+// Enable packet capture for analysis
+csma.EnablePcapAll("libuuid-integ", false);
+
+// Run simulation
+Simulator::Run();
 ```
 
 Expected output:
@@ -161,7 +184,7 @@ Check libuuid-integ*.pcap files to see the UUID-based packets in Wireshark.
 Successfully assigned UUIDs to 2 nodes
 ```
 
-## Step 8: Analyze PCAP Files (Optional)
+## Analyze PCAP Files (Optional)
 
 ```bash
 # View packet content (requires Wireshark or tcpdump)
